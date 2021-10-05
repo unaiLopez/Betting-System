@@ -101,7 +101,7 @@ def compute_accumulated_commited_faults(statistics_per_team, data):
                     statistics_per_team[i][11].append(data.loc[j, "Away Team Faults Commited"]+statistics_per_team[i][11][-1])
     return data, statistics_per_team
 
-def compute_accumulated_received_corners(statistics_per_team, data):
+def compute_accumulated_received_cornerss(tatistics_per_team, data):
     for i in range(len(statistics_per_team)):
         for j in range(len(data)):
             if(data.loc[j, "Home Team"] == statistics_per_team[i][0]):
