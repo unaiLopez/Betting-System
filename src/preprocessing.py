@@ -71,6 +71,7 @@ def calculate_stat_differences(df):
     df['Difference_Middle_Score'] = df['Home Middle Score'] - df['Away Middle Score']
     df['Difference_Defensive_Score'] = df['Home Defensive Score'] - df['Away Defensive Score']
     df['Difference_Budget'] = df['Home Budget'] - df['Away Budget']
+    df['DIFFERENCE_ELO'] = df['HOME_ELO'] - df['AWAY_ELO']
 
     return df
 
