@@ -44,7 +44,7 @@ def get_season_df(year: int) -> pd.DataFrame:
     fifa_dates = df_fifa['Date'].unique()
     last_update = fifa_dates.min()
     first_iteration = True
-    for index, row in df_league.iterrows():
+    for _, row in df_league.iterrows():
         current_date = row['Date']
         df_aux = df_fifa.query('@last_update == Date')
         home_team = row['HomeTeam']
@@ -120,12 +120,12 @@ def main():
                                  'BbAH', 'BbOU'
                                  ], axis=1, inplace=True, errors='ignore')
             print('')
-            print(season_year)
-            print('FIFA: ', list(set(season_matches).difference(set(matches_df))))
-            print('Matches:', list(set(matches_df).difference(set(season_matches))))
+            #print(season_year)
+            #print('FIFA: ', list(set(season_matches).difference(set(matches_df))))
+            #print('Matches:', list(set(matches_df).difference(set(season_matches))))
             matches_df = matches_df.append(season_matches, ignore_index=True)
 
-    matches_df.to_csv('../data/All_Matches.csv', index=False, encoding='UTF-8')
+    matches_df.to_csv('../data/raw_data/all_matches.csv', index=False, encoding='UTF-8')
 
 
 if __name__ == '__main__':
