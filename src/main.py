@@ -14,7 +14,7 @@ def full_time_result_to_class(result):
         return 2
 
 if __name__ == '__main__':
-    df = pd.read_csv('../data/ready_data/preprocessed_all_matches.csv', parse_dates=['Date'])
+    df = pd.read_csv('../inputs/ready_data/preprocessed_all_matches.csv', parse_dates=['Date'])
 
     df = df.dropna(axis=0, how='any')
     df = df[df['Date'] > '2009-05-06']

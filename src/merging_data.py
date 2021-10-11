@@ -125,7 +125,7 @@ def main():
             #print('Matches:', list(set(matches_df).difference(set(season_matches))))
             matches_df = matches_df.append(season_matches, ignore_index=True)
 
-    matches_df.to_csv('../data/raw_data/all_matches.csv', index=False, encoding='UTF-8')
+    matches_df.to_csv('../inputs/raw_data/all_matches.csv', index=False, encoding='UTF-8')
 
 
 if __name__ == '__main__':

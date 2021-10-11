@@ -75,11 +75,11 @@ def calculate_stat_differences(df):
     return df
 
 if __name__ == '__main__':
-    df = pd.read_csv('../data/raw_data/all_matches.csv', parse_dates=['Date'])
+    df = pd.read_csv('../inputs/raw_data/all_matches.csv', parse_dates=['Date'])
     
     df.Full_Time_Result = df.Full_Time_Result.apply(full_time_result_to_class)
 
     df = calculate_elo_ratings(df)
     df = calculate_stat_differences(df)
 
-    df.to_csv('../data/ready_data/preprocessed_all_matches.csv', index=False)
+    df.to_csv('../inputs/ready_data/preprocessed_all_matches.csv', index=False)
