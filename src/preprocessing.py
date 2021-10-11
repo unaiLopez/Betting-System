@@ -65,6 +65,31 @@ def calculate_elo_ratings(df):
     
     return df
 
+
+def shift_elo(df):
+    elo_dict = dict()
+    for index, row in df.iterrows():
+        home_team = row.HomeTeam
+        away_team = row.AwayTeam
+        home_elo = row.HOME_ELO
+        away_elo = row.AWAY_ELO
+
+        if home_team not in elo_dict:
+            elo_dict[home_team] = home_elo
+        else:
+            df.loc[index, 'HOME_ELO'] = elo_dict[home_team]
+            elo_dict[home_team] = home_elo
+
+        if away_team not in elo_dict:
+
+            elo_dict[away_team] = away_elo
+        else:
+            df.loc[index, 'AWAY_ELO'] = elo_dict[away_team]
+            elo_dict[away_team] = away_elo
+    
+    return df
+
+
 def calculate_stat_differences(df):
     df['Difference_Overall_Score'] = df['Home Overall Score'] - df['Away Overall Score']
     df['Difference_Attack_Score'] = df['Home Attack Score'] - df['Away Attack Score']
@@ -81,6 +106,7 @@ if __name__ == '__main__':
     df.Full_Time_Result = df.Full_Time_Result.apply(full_time_result_to_class)
 
     df = calculate_elo_ratings(df)
+    df = shift_elo(df)
     df = calculate_stat_differences(df)
 
     df.to_csv('../inputs/ready_data/preprocessed_all_matches.csv', index=False)
