@@ -75,6 +75,56 @@ def calculate_stat_differences(df):
 
     return df
 
+def calculate_history(df: pd.DataFrame) -> pd.DataFrame:
+    team_history = dict()
+    home_win = []
+    away_win = []
+    draws = []
+    matches = []
+    for _,row in df.iterrows():
+        home_team = row['HomeTeam']
+        away_team = row['AwayTeam']
+        teams = sorted([home_team, away_team], key=str.lower)
+        teams = teams[0]+teams[1]
+        result = row["Full_Time_Result"]
+        if teams not in team_history:
+            team_history[teams] = {home_team: 0, away_team: 0, 'Draw': 0, 'Matches': 0}
+        
+        if result == 0:
+            value = team_history[teams]['Draw'] 
+            draws.append(value)
+            team_history[teams]['Draw'] = value + 1
+
+            home_win.append(team_history[teams][home_team])
+            away_win.append(team_history[teams][away_team])
+            
+        elif result == 1:
+            value = team_history[teams][home_team] 
+            home_win.append(value)
+            team_history[teams][home_team] = value + 1
+
+            draws.append(team_history[teams]['Draw'])
+            away_win.append(team_history[teams][away_team])
+
+        elif result == 2:
+            value = team_history[teams][away_team]
+            away_win.append(value)
+            team_history[teams][away_team] = value + 1
+            
+            draws.append(team_history[teams]['Draw'])
+            home_win.append(team_history[teams][home_team])
+
+        matches.append(team_history[teams]['Matches'] + 1)
+        team_history[teams]['Matches'] = team_history[teams]['Matches'] + 1
+
+    print(len(home_win), len(away_win), len(draws), len(matches))
+    df['HISTORICAL_HOME_WINS'] = home_win
+    df['HISTORICAL_AWAY_WINS'] = away_win
+    df['HISTORICAL_DRAWS'] = draws
+    df['HISTORICAL_MATCHES'] = matches
+
+    return df
+
 if __name__ == '__main__':
     df = pd.read_csv('../inputs/raw_data/all_matches.csv', parse_dates=['Date'])
     
@@ -82,5 +132,6 @@ if __name__ == '__main__':
 
     df = calculate_elo_ratings(df)
     df = calculate_stat_differences(df)
-
+    df = calculate_history(df)
+    
     df.to_csv('../inputs/ready_data/preprocessed_all_matches.csv', index=False)
