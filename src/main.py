@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.model_selection import cross_val_score, train_test_split, ShuffleSplit
 from sklearn.metrics import accuracy_score, make_scorer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
@@ -9,6 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
+from typing import List, Tuple
 
 def full_time_result_to_class(result: pd.Series) -> int:
     if result == 'H':
@@ -67,10 +68,19 @@ def calculate_profit(y_true, y_pred, odds):
     print(f'PROFIT INTERWETTEN -> {np.mean(profit_interwetten) * 100}')
     print(f'PROFIT WILLIAM HILL -> {np.mean(profit_william_hill) * 100}')
 
+def _create_folds(df: pd.DataFrame, n_folds: int) -> List[Tuple]:
+    ss = ShuffleSplit(n_splits=n_folds, test_size=0.1, random_state=42)
+
+    folds = list()
+    for train_index, test_index in ss.split(df):
+        folds.append((train_index, test_index))
+    
+    return folds
+
 def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df['Date'] > '2009-05-06']
 
-    columns_to_mantain = [
+    columns_to_mantain = ['Date',
         'Full_Time_Result', 'Home Overall Score', 'Home Attack Score', 'Home Middle Score', 'Home Defensive Score', 'Home Budget',
         'Away Overall Score', 'Away Attack Score', 'Away Middle Score', 'Away Defensive Score', 'Away Budget', 'Difference_Overall_Score',
         'Difference_Attack_Score', 'Difference_Middle_Score', 'Difference_Defensive_Score', 'Difference_Budget', 'HOME_ELO', 'AWAY_ELO', 'DIFFERENCE_ELO',
@@ -91,20 +101,23 @@ if __name__ == '__main__':
         'Interwetten_Home_Win_Odds', 'Interwetten_Draw_Odds', 'Interwetten_Away_Win_Odds', 'WilliamHill_Home_Win_Odds', 'WilliamHill_Draw_Odds',
         'WilliamHill_Away_Win_Odds', 'VCBet_Home_Win_Odds', 'VCBet_Draw_Odds', 'VCBet_Away_Win_Odds']]
     
-    df = df[['Full_Time_Result', 'Home Overall Score', 'Home Attack Score', 'Home Middle Score', 'Home Defensive Score', 'Home Budget',
+    df = df[['Date', 'Full_Time_Result', 'Home Overall Score', 'Home Attack Score', 'Home Middle Score', 'Home Defensive Score', 'Home Budget',
         'Away Overall Score', 'Away Attack Score', 'Away Middle Score', 'Away Defensive Score', 'Away Budget', 'Difference_Overall_Score',
         'Difference_Attack_Score', 'Difference_Middle_Score', 'Difference_Defensive_Score', 'Difference_Budget', 'HOME_ELO', 'AWAY_ELO', 'DIFFERENCE_ELO']]
+
+    df['Mes'] = df.Date.dt.month
+    df['Dia'] = df.Date.dt.dayofweek
+
+    df.drop('Date', axis=1, inplace=True)
 
     X = df.drop('Full_Time_Result', axis=1)
     y = df['Full_Time_Result']
 
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
-    print(len(y_test))
+    folds = _create_folds(df, n_folds=20)
 
     #model = RandomForestClassifier(random_state=42)
     model = Pipeline([
-        ('cluster', KMeans(n_clusters=5)),
+        ('cluster', KMeans(n_clusters=10)),
         ('scaler', StandardScaler()),
         ('logreg', LogisticRegression(random_state=42))
     ])
@@ -112,18 +125,25 @@ if __name__ == '__main__':
     #    ('scaler', StandardScaler()),
     #    ('svc', SVC(random_state=42))
     #])
-    score = cross_val_score(model, X_train, y_train, scoring=make_scorer(accuracy_score, greater_is_better=True), cv=10)
-    print(score)
-    print(np.mean(score))
+    accuracies = list()
+    for i, (train, test) in enumerate(folds):
+        X = df.drop('Full_Time_Result', axis=1)
+        y = df['Full_Time_Result']
 
-    #print(score)
-    #print(np.mean(score))
+        X_train, y_train = X.iloc[train], y.iloc[train]
+        X_test, y_test = X.iloc[test], y.iloc[test]
+        
+        model.fit(X_train, y_train)
+        preds = model.predict(X_test)
 
+        accuracies.append(accuracy_score(y_test.values, preds))
 
-    model.fit(X_train, y_train)
-    preds = model.predict(X_test)
-    print(accuracy_score(y_test.values, preds))
+        calculate_profit(y_test, preds, odds)
+        print()
 
-    calculate_profit(y_test, preds, odds)
+    print(accuracies)
+    print(np.mean(accuracies))
 
-    index = y_test.index
+    #from tpot import TPOTClassifier
+    #model = TPOTClassifier(generations=5, population_size=50, cv=folds, scoring='accuracy', verbosity=2, random_state=42, n_jobs=-1)
+    #model.fit(X, y)

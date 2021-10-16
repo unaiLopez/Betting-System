@@ -28,11 +28,11 @@ def calculate_elo_ratings(df):
 
         if row['HomeTeam'] not in elo_formula_dict:
             elo_formula_dict[row['HomeTeam']] = {}
-            elo_formula_dict[row['HomeTeam']]['ELO'] = 1000
+            elo_formula_dict[row['HomeTeam']]['ELO'] = 1500
 
         if row['AwayTeam'] not in elo_formula_dict:
             elo_formula_dict[row['AwayTeam']] = {}
-            elo_formula_dict[row['AwayTeam']]['ELO'] = 1000
+            elo_formula_dict[row['AwayTeam']]['ELO'] = 1500
 
         rating_difference = elo_formula_dict[row['HomeTeam']]['ELO'] - elo_formula_dict[row['AwayTeam']]['ELO'] + 100
         elo_formula_dict[row['HomeTeam']]['Win_Expectancy'] = 1 / (10 ** (-rating_difference / 400) + 1)
