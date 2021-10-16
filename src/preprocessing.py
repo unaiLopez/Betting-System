@@ -28,11 +28,11 @@ def calculate_elo_ratings(df):
 
         if row['HomeTeam'] not in elo_formula_dict:
             elo_formula_dict[row['HomeTeam']] = {}
-            elo_formula_dict[row['HomeTeam']]['ELO'] = 1000
+            elo_formula_dict[row['HomeTeam']]['ELO'] = 1500
 
         if row['AwayTeam'] not in elo_formula_dict:
             elo_formula_dict[row['AwayTeam']] = {}
-            elo_formula_dict[row['AwayTeam']]['ELO'] = 1000
+            elo_formula_dict[row['AwayTeam']]['ELO'] = 1500
 
         rating_difference = elo_formula_dict[row['HomeTeam']]['ELO'] - elo_formula_dict[row['AwayTeam']]['ELO'] + 100
         elo_formula_dict[row['HomeTeam']]['Win_Expectancy'] = 1 / (10 ** (-rating_difference / 400) + 1)
@@ -64,6 +64,31 @@ def calculate_elo_ratings(df):
     df.drop(['Goal_Difference', 'Full_Time_Away_Team_Goals', 'Full_Time_Home_Team_Goals'], axis=1, inplace=True)
     
     return df
+
+
+def shift_elo(df):
+    elo_dict = dict()
+    for index, row in df.iterrows():
+        home_team = row.HomeTeam
+        away_team = row.AwayTeam
+        home_elo = row.HOME_ELO
+        away_elo = row.AWAY_ELO
+
+        if home_team not in elo_dict:
+            elo_dict[home_team] = home_elo
+        else:
+            df.loc[index, 'HOME_ELO'] = elo_dict[home_team]
+            elo_dict[home_team] = home_elo
+
+        if away_team not in elo_dict:
+
+            elo_dict[away_team] = away_elo
+        else:
+            df.loc[index, 'AWAY_ELO'] = elo_dict[away_team]
+            elo_dict[away_team] = away_elo
+    
+    return df
+
 
 def calculate_stat_differences(df):
     df['Difference_Overall_Score'] = df['Home Overall Score'] - df['Away Overall Score']
@@ -131,6 +156,7 @@ if __name__ == '__main__':
     df.Full_Time_Result = df.Full_Time_Result.apply(full_time_result_to_class)
 
     df = calculate_elo_ratings(df)
+    df = shift_elo(df)
     df = calculate_stat_differences(df)
     df = calculate_history(df)
     
