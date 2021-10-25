@@ -77,11 +77,16 @@ def calculate_profit(y_true, y_pred, odds):
 
     return vcbet, bet365, bet_and_win, interwetten, william_hill
 
-def _create_folds(df: pd.DataFrame, n_folds: int) -> List[Tuple]:
-    ss = ShuffleSplit(n_splits=n_folds, test_size=0.1, random_state=42)
-
+def _create_folds(df: pd.DataFrame) -> List[Tuple]:
     folds = list()
-    for train_index, test_index in ss.split(df):
+    df = df.reset_index()
+    for year in df.Date.dt.year.unique():
+        print(year)
+        temp_df = df[df.Date.dt.year == year]
+
+        test_index = temp_df.index[-80:].values
+        train_index = df.index.values[~test_index]
+        
         folds.append((train_index, test_index))
     
     return folds
@@ -117,12 +122,13 @@ if __name__ == '__main__':
     df['Mes'] = df.Date.dt.month
     df['Dia'] = df.Date.dt.dayofweek
 
+    folds = _create_folds(df)
+
     df.drop('Date', axis=1, inplace=True)
 
     X = df.drop('Full_Time_Result', axis=1)
     y = df['Full_Time_Result']
 
-    folds = _create_folds(df, n_folds=20)
 
     #model = RandomForestClassifier(random_state=42)
     model = Pipeline([
