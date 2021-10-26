@@ -106,7 +106,7 @@ def calculate_history(df: pd.DataFrame) -> pd.DataFrame:
     away_win = []
     draws = []
     matches = []
-    for _,row in df.iterrows():
+    for _, row in df.iterrows():
         home_team = row['HomeTeam']
         away_team = row['AwayTeam']
         teams = sorted([home_team, away_team], key=str.lower)
@@ -151,8 +151,9 @@ def calculate_history(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 if __name__ == '__main__':
-    df = pd.read_csv('../inputs/raw_data/all_matches.csv', parse_dates=['Date'])
-    
+    df = pd.read_csv('../../inputs/raw_data/all_matches.csv', parse_dates=['Date'])
+    df = df[df.HomeTeam.notna()]
+
     df.Full_Time_Result = df.Full_Time_Result.apply(full_time_result_to_class)
 
     df = calculate_elo_ratings(df)
@@ -160,4 +161,4 @@ if __name__ == '__main__':
     df = calculate_stat_differences(df)
     df = calculate_history(df)
     
-    df.to_csv('../inputs/ready_data/preprocessed_all_matches.csv', index=False)
+    df.to_csv('../../inputs/ready_data/preprocessed_all_matches.csv', index=False)

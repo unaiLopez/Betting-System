@@ -10,8 +10,8 @@ def format_date(match_date: str) -> str:
 
 
 def get_season_df(year: int) -> pd.DataFrame:
-    league_file = '../data/Spanish-League-Data/Season_' + str(year) + '_' + str(year+1) + '.csv'
-    fifa_file = '../data/Web-Scraping-FIFA/Teams-Season/Teams Season ' + str(year) + '-' + str(year+1)
+    league_file = '../../data/Spanish-League-Data/Season_' + str(year) + '_' + str(year+1) + '.csv'
+    fifa_file = '../../data/Web-Scraping-FIFA/Teams-Season/Teams Season ' + str(year) + '-' + str(year+1)
     df_league = pd.read_csv(league_file)
     df_fifa = pd.read_csv(fifa_file)
 
@@ -125,7 +125,7 @@ def main():
             #print('Matches:', list(set(matches_df).difference(set(season_matches))))
             matches_df = matches_df.append(season_matches, ignore_index=True)
 
-    matches_df.to_csv('../inputs/raw_data/all_matches.csv', index=False, encoding='UTF-8')
+    matches_df.to_csv('../../inputs/raw_data/all_matches.csv', index=False, encoding='UTF-8')
 
 
 if __name__ == '__main__':
