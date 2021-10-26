@@ -21,7 +21,7 @@ def get_season_df(year: int) -> pd.DataFrame:
     if year < 2018:
         df_league['Date'] = df_league['Date'].apply(format_date)
     df_league['Date'] = pd.to_datetime(df_league['Date'])
-
+    df_league['Season'] = str(year) + '_' + str(year + 1)
     df_fifa['Team'] = df_fifa['Team'].apply(team_name_changer)
     df_fifa['Date'] = pd.to_datetime(df_fifa['Date'])
 
