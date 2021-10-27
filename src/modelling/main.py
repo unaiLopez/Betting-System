@@ -14,33 +14,14 @@ from imblearn.over_sampling import SMOTE
 from typing import List, Tuple
 
 from create_folds import create_folds
-from metrics import calculate_profit, calculate_mean_mean_profit
+from prepare_data import prepare_data
+from metrics import calculate_profit_per_booker, calculate_profit_all_bookers_mean_profit, get_all_booker_odd_values
 
-def full_time_result_to_class(result: pd.Series) -> int:
-    if result == 'H':
-        return 1
-    elif result == 'D':
-        return 0
-    elif result == 'A':
-        return 2
 
-def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
-    df = df[df['Date'] > '2009-05-06']
-
-    columns_to_mantain = ['Date', 'Season',
-        'Full_Time_Result', 'Home Overall Score', 'Home Attack Score', 'Home Middle Score', 'Home Defensive Score', 'Home Budget',
-        'Away Overall Score', 'Away Attack Score', 'Away Middle Score', 'Away Defensive Score', 'Away Budget', 'Difference_Overall_Score',
-        'Difference_Attack_Score', 'Difference_Middle_Score', 'Difference_Defensive_Score', 'Difference_Budget', 'HOME_ELO', 'AWAY_ELO', 'DIFFERENCE_ELO',
-        'Bet365_Home_Win_Odds', 'Bet365_Draw_Odds', 'Bet365_Away_Win_Odds', 'BetAndWin_Home_Win_Odds', 'BetAndWin_Draw_Odds', 'BetAndWin_Away_Win_Odds',
-        'Interwetten_Home_Win_Odds', 'Interwetten_Draw_Odds', 'Interwetten_Away_Win_Odds', 'WilliamHill_Home_Win_Odds', 'WilliamHill_Draw_Odds',
-        'WilliamHill_Away_Win_Odds', 'VCBet_Home_Win_Odds', 'VCBet_Draw_Odds', 'VCBet_Away_Win_Odds'
-    ]
-
-    df = df[columns_to_mantain]
-
-    return df
 
 def objective(trial: object, model: object, X: pd.DataFrame, y: pd.Series, odds: pd.DataFrame, folds: List[Tuple]) -> float:
+    threshold = trial.suggest_float("threshold", 0.4, 0.6)
+
     params = {
         "lgbm__verbosity": -1,
         "lgbm__boosting_type": "gbdt",
@@ -63,31 +44,39 @@ def objective(trial: object, model: object, X: pd.DataFrame, y: pd.Series, odds:
         
         model.fit(X_train, y_train)
         preds = model.predict(X_test)
+        pred_probas = np.sum((model.predict_proba(X_test) >= threshold), axis=1)
 
-        my_profit = calculate_mean_mean_profit(y_test, preds, odds)
+        print(threshold)
+        print(pred_probas)
+        print(preds)
+
+
+
+        my_profit = calculate_profit_all_bookers_mean_profit(y_test, preds, odds)
         
         profit.append(my_profit)
 
-    return np.round(np.nanmean(profit), 3)
+    return np.nanmean(profit)
 
 def fine_tune(model, X_train: pd.DataFrame, y_train: pd.Series, folds: List[Tuple], odds: pd.DataFrame, X_test: pd.DataFrame, y_test: pd.Series) -> None:
     func = lambda trial: objective(trial, model, X_train, y_train, odds, folds)
     study = optuna.create_study(direction='maximize')
-    study.optimize(func, timeout=800, n_jobs=-1)
+    #study.optimize(func, timeout=120, n_jobs=6)
+    study.optimize(func, n_trials=1, n_jobs=6)
+
+    trials_dataframe = study.trials_dataframe().sort_values(['value'], ascending=False)
+    trials_dataframe.to_csv('trials_dataframe.csv', index=False)
 
     model.set_params(**study.best_params)
 
     model.fit(X_train, y_train)
     preds = model.predict(X_test)
-    profit = calculate_mean_mean_profit(y_test, preds, odds)
+    profit = calculate_profit_all_bookers_mean_profit(y_test, preds, odds)
 
     print(f'BEST MEAN PROFIT PER MATCH: {study.best_value}%')
     print(f'PREDICTED NUMBER OF MATCHES {len(y_test)}')
     print(f'PROFIT TEST PER MATCH {profit}%')
     print(f'ACCURACY TEST {np.round(accuracy_score(y_test.values, preds), 3) * 100}%')
-
-    trials_dataframe = study.trials_dataframe().sort_values(by='value', ascending=False)
-    trials_dataframe.to_csv('trials_dataframe.csv', index=False)
 
     os.makedirs('../../models', exist_ok=True)
     joblib.dump(model, '../../models/best_model.bin')
@@ -95,16 +84,7 @@ def fine_tune(model, X_train: pd.DataFrame, y_train: pd.Series, folds: List[Tupl
 def train_with_optuna():
     df = pd.read_csv('../../inputs/ready_data/preprocessed_all_matches.csv', parse_dates=['Date'])
     df = prepare_data(df)
-
-    odds_to_mantain = ['Bet365_Home_Win_Odds', 'Bet365_Draw_Odds', 'Bet365_Away_Win_Odds', 'BetAndWin_Home_Win_Odds', 'BetAndWin_Draw_Odds', 'BetAndWin_Away_Win_Odds',
-        'Interwetten_Home_Win_Odds', 'Interwetten_Draw_Odds', 'Interwetten_Away_Win_Odds', 'WilliamHill_Home_Win_Odds', 'WilliamHill_Draw_Odds',
-        'WilliamHill_Away_Win_Odds', 'VCBet_Home_Win_Odds', 'VCBet_Draw_Odds', 'VCBet_Away_Win_Odds']
-    odds = df[odds_to_mantain]
-    
-    odds['Home_Win_Odds'] = np.nanmean(odds[['Bet365_Home_Win_Odds', 'BetAndWin_Home_Win_Odds', 'Interwetten_Home_Win_Odds', 'WilliamHill_Home_Win_Odds', 'VCBet_Home_Win_Odds']], axis=1)
-    odds['Away_Win_Odds'] = np.mean(odds[['Bet365_Away_Win_Odds', 'BetAndWin_Away_Win_Odds', 'Interwetten_Away_Win_Odds', 'WilliamHill_Away_Win_Odds', 'VCBet_Away_Win_Odds']], axis=1)
-    odds['Draw_Odds'] = np.mean(odds[['Bet365_Draw_Odds', 'BetAndWin_Draw_Odds', 'Interwetten_Draw_Odds', 'WilliamHill_Draw_Odds', 'VCBet_Draw_Odds']], axis=1)
-    odds.drop(odds_to_mantain, axis=1, inplace=True)
+    odds = get_all_booker_odd_values(df)
     
     df = df[['Date', 'Season', 'Full_Time_Result', 'Home Overall Score', 'Home Attack Score', 'Home Middle Score', 'Home Defensive Score', 'Home Budget',
         'Away Overall Score', 'Away Attack Score', 'Away Middle Score', 'Away Defensive Score', 'Away Budget', 'Difference_Overall_Score',
@@ -183,7 +163,7 @@ def train_without_optuna():
         accuracy = np.round(accuracy_score(y_test.values, preds), 3)
         accuracies.append(accuracy)
 
-        vcbet, bet365, bet_and_win, interwetten, william_hill = calculate_profit(y_test, preds, odds)
+        vcbet, bet365, bet_and_win, interwetten, william_hill = calculate_profit_per_booker(y_test, preds, odds)
         
         profit_vcbet.append(vcbet)
         profit_bet365.append(bet365)

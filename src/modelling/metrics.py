@@ -2,15 +2,43 @@ import numpy as np
 import pandas as pd
 
 from typing import Tuple
+        
+def get_mean_booker_odd_values(df: pd.DataFrame) -> pd.DataFrame:
+    odd_columns= [
+        'Bet365_Home_Win_Odds', 'Bet365_Draw_Odds', 'Bet365_Away_Win_Odds', 'BetAndWin_Home_Win_Odds', 'BetAndWin_Draw_Odds', 'BetAndWin_Away_Win_Odds',
+        'Interwetten_Home_Win_Odds', 'Interwetten_Draw_Odds', 'Interwetten_Away_Win_Odds', 'WilliamHill_Home_Win_Odds', 'WilliamHill_Draw_Odds',
+        'WilliamHill_Away_Win_Odds', 'VCBet_Home_Win_Odds', 'VCBet_Draw_Odds', 'VCBet_Away_Win_Odds'
+    ]
+    mean_odds = df[odd_columns]
+    
+    mean_odds['Home_Win_Odds'] = np.nanmean(mean_odds[['Bet365_Home_Win_Odds', 'BetAndWin_Home_Win_Odds', 'Interwetten_Home_Win_Odds', 'WilliamHill_Home_Win_Odds', 'VCBet_Home_Win_Odds']], axis=1)
+    mean_odds['Away_Win_Odds'] = np.mean(mean_odds[['Bet365_Away_Win_Odds', 'BetAndWin_Away_Win_Odds', 'Interwetten_Away_Win_Odds', 'WilliamHill_Away_Win_Odds', 'VCBet_Away_Win_Odds']], axis=1)
+    mean_odds['Draw_Odds'] = np.mean(mean_odds[['Bet365_Draw_Odds', 'BetAndWin_Draw_Odds', 'Interwetten_Draw_Odds', 'WilliamHill_Draw_Odds', 'VCBet_Draw_Odds']], axis=1)
+    
+    mean_odds.drop(odd_columns, axis=1, inplace=True)
 
-def calculate_profit(y_true: pd.Series, y_pred: np.array, odds: pd.DataFrame) -> Tuple[float, float, float, float, float]:
+    return mean_odds
+
+def get_all_booker_odd_values(df: pd.DataFrame) -> pd.DataFrame:
+    odd_columns= [
+        'Bet365_Home_Win_Odds', 'Bet365_Draw_Odds', 'Bet365_Away_Win_Odds', 'BetAndWin_Home_Win_Odds', 'BetAndWin_Draw_Odds', 'BetAndWin_Away_Win_Odds',
+        'Interwetten_Home_Win_Odds', 'Interwetten_Draw_Odds', 'Interwetten_Away_Win_Odds', 'WilliamHill_Home_Win_Odds', 'WilliamHill_Draw_Odds',
+        'WilliamHill_Away_Win_Odds', 'VCBet_Home_Win_Odds', 'VCBet_Draw_Odds', 'VCBet_Away_Win_Odds'
+    ]
+
+    odds = df[odd_columns]
+
+    return odds
+
+
+def calculate_profit_per_booker(y_true: pd.Series, y_pred: np.array, odds: pd.DataFrame) -> Tuple[float, float, float, float, float]:
     odds = odds.loc[
         y_true.index, [
                         'Bet365_Home_Win_Odds', 'Bet365_Draw_Odds', 'Bet365_Away_Win_Odds', 'BetAndWin_Home_Win_Odds', 'BetAndWin_Draw_Odds', 'BetAndWin_Away_Win_Odds',
                         'Interwetten_Home_Win_Odds', 'Interwetten_Draw_Odds', 'Interwetten_Away_Win_Odds', 'WilliamHill_Home_Win_Odds', 'WilliamHill_Draw_Odds',
                         'WilliamHill_Away_Win_Odds', 'VCBet_Home_Win_Odds', 'VCBet_Draw_Odds', 'VCBet_Away_Win_Odds'
-                      ]
-                   ]
+                    ]
+                ]
 
     profit_vcbet = list()
     profit_bet365 = list()
@@ -60,25 +88,26 @@ def calculate_profit(y_true: pd.Series, y_pred: np.array, odds: pd.DataFrame) ->
 
     return vcbet, bet365, bet_and_win, interwetten, william_hill
 
-def calculate_mean_mean_profit(y_true: pd.Series, y_pred: np.array, odds: pd.DataFrame) -> Tuple[float, float, float, float, float]:
-    odds = odds.loc[y_true.index, ['Home_Win_Odds', 'Draw_Odds', 'Away_Win_Odds']]
+def calculate_profit_all_bookers_mean_profit(y_true: pd.Series, y_pred: np.array, odds: pd.DataFrame) -> float:
+    mean_odds = get_mean_booker_odd_values(odds)
+    odds = mean_odds.loc[y_true.index, ['Home_Win_Odds', 'Draw_Odds', 'Away_Win_Odds']]
 
 
-    mean_profit = list()
+    profit = list()
     for i, (true, pred) in enumerate(zip(y_true.values, y_pred)):
         odd = odds.iloc[i]
         if true == pred:
             if true == 1:
-                mean_profit.append(odd['Home_Win_Odds'] - 1)
+                profit.append(odd['Home_Win_Odds'] - 1)
             elif true == 0:
-                mean_profit.append(odd['Draw_Odds'] - 1)
+                profit.append(odd['Draw_Odds'] - 1)
             else:
-                mean_profit.append(odd['Away_Win_Odds'] - 1)
+                profit.append(odd['Away_Win_Odds'] - 1)
         else:
-            mean_profit.append(-1)
+            profit.append(-1)
     
-    mean_mean_profit = np.round(np.nanmean(mean_profit) * 100, 3)
+    mean_profit = np.nanmean(profit) * 100
 
-    #print(f'MEAN MEAN PROFIT PER MATCH -> {mean_mean_profit}%')
+    #print(f'MEAN PROFIT PER MATCH -> {mean_profit}%')
 
-    return mean_mean_profit
+    return mean_profit
