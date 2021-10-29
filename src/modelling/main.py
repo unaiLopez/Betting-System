@@ -17,10 +17,28 @@ from create_folds import create_folds
 from prepare_data import prepare_data
 from metrics import calculate_profit_per_booker, calculate_profit_all_bookers_mean_profit, get_all_booker_odd_values
 
-
+def inference(model: object, X_test: pd.DataFrame, y_test: pd.Series, odds: pd.DataFrame, threshold: float):
+    preds = model.predict(X_test)        
+    chosen_preds = np.where(model.predict_proba(X_test)[:, 1] > threshold, 1, 0)
+    
+    index = y_test.index
+    preds = pd.Series(preds, index=index)
+    chosen_preds = pd.Series(chosen_preds, index=index)
+    preds = pd.concat([preds, chosen_preds], axis=1)
+    preds.columns = ['PREDICTION', 'MASK']
+    preds = preds[preds.MASK != 0]
+    
+    if preds.empty:
+        my_profit = 0.0
+    else:
+        y_test = y_test[y_test.index.isin(preds.index)]
+        preds = preds.PREDICTION.values
+        my_profit = calculate_profit_all_bookers_mean_profit(y_test, preds, odds)
+    
+    return y_test, preds, my_profit
 
 def objective(trial: object, model: object, X: pd.DataFrame, y: pd.Series, odds: pd.DataFrame, folds: List[Tuple]) -> float:
-    threshold = trial.suggest_float("threshold", 0.4, 0.6)
+    threshold = trial.suggest_float("threshold", 0.4, 0.7)
 
     params = {
         "lgbm__verbosity": -1,
@@ -43,16 +61,8 @@ def objective(trial: object, model: object, X: pd.DataFrame, y: pd.Series, odds:
         X_test, y_test = X.iloc[test], y.iloc[test]
         
         model.fit(X_train, y_train)
-        preds = model.predict(X_test)
-        pred_probas = np.sum((model.predict_proba(X_test) >= threshold), axis=1)
-
-        print(threshold)
-        print(pred_probas)
-        print(preds)
-
-
-
-        my_profit = calculate_profit_all_bookers_mean_profit(y_test, preds, odds)
+        
+        _, _, my_profit = inference(model, X_test, y_test, odds, threshold)
         
         profit.append(my_profit)
 
@@ -61,17 +71,20 @@ def objective(trial: object, model: object, X: pd.DataFrame, y: pd.Series, odds:
 def fine_tune(model, X_train: pd.DataFrame, y_train: pd.Series, folds: List[Tuple], odds: pd.DataFrame, X_test: pd.DataFrame, y_test: pd.Series) -> None:
     func = lambda trial: objective(trial, model, X_train, y_train, odds, folds)
     study = optuna.create_study(direction='maximize')
-    #study.optimize(func, timeout=120, n_jobs=6)
-    study.optimize(func, n_trials=1, n_jobs=6)
+    study.optimize(func, timeout=360, n_jobs=-1)
+    #study.optimize(func, n_trials=1, n_jobs=6)
 
     trials_dataframe = study.trials_dataframe().sort_values(['value'], ascending=False)
     trials_dataframe.to_csv('trials_dataframe.csv', index=False)
 
-    model.set_params(**study.best_params)
+    best_params = study.best_params
+    threshold = best_params['threshold']
+    del best_params['threshold']
+
+    model.set_params(**best_params)
 
     model.fit(X_train, y_train)
-    preds = model.predict(X_test)
-    profit = calculate_profit_all_bookers_mean_profit(y_test, preds, odds)
+    y_test, preds, profit = inference(model, X_test, y_test, odds, threshold)
 
     print(f'BEST MEAN PROFIT PER MATCH: {study.best_value}%')
     print(f'PREDICTED NUMBER OF MATCHES {len(y_test)}')
@@ -80,6 +93,7 @@ def fine_tune(model, X_train: pd.DataFrame, y_train: pd.Series, folds: List[Tupl
 
     os.makedirs('../../models', exist_ok=True)
     joblib.dump(model, '../../models/best_model.bin')
+    joblib.dump(threshold, '../../models/best_threshold.bin')
 
 def train_with_optuna():
     df = pd.read_csv('../../inputs/ready_data/preprocessed_all_matches.csv', parse_dates=['Date'])
