@@ -135,7 +135,9 @@ def train_without_optuna():
     
     df = df[['Date', 'Season', 'Full_Time_Result', 'Home Overall Score', 'Home Attack Score', 'Home Middle Score', 'Home Defensive Score', 'Home Budget',
         'Away Overall Score', 'Away Attack Score', 'Away Middle Score', 'Away Defensive Score', 'Away Budget', 'Difference_Overall_Score',
-        'Difference_Attack_Score', 'Difference_Middle_Score', 'Difference_Defensive_Score', 'Difference_Budget', 'HOME_ELO', 'AWAY_ELO', 'DIFFERENCE_ELO']]
+        'Difference_Attack_Score', 'Difference_Middle_Score', 'Difference_Defensive_Score', 'Difference_Budget', 'HOME_ELO', 'AWAY_ELO', 'DIFFERENCE_ELO',
+        'HOME_TRUESKILL_MU_NO_RESET', 'AWAY_TRUESKILL_MU_NO_RESET', 'HOME_TRUESKILL_SIGMA_NO_RESET', 'AWAY_TRUESKILL_SIGMA_NO_RESET', 'DRAW_CHANCE_NO_RESET',
+        'HOME_TRUESKILL_MU_SEASON', 'AWAY_TRUESKILL_MU_SEASON', 'HOME_TRUESKILL_SIGMA_SEASON', 'AWAY_TRUESKILL_SIGMA_SEASON', 'DRAW_CHANCE_SEASON']]
 
     df['Mes'] = df.Date.dt.month
     df['Dia'] = df.Date.dt.dayofweek
@@ -165,7 +167,7 @@ def train_without_optuna():
     profit_interwetten = list()
     profit_william_hill = list()
     for i, (train, test) in enumerate(folds):
-        X = df.drop('Full_Time_Result', axis=1)
+        X = df.drop(['Full_Time_Result', 'Date', 'Season'], axis=1)
         y = df['Full_Time_Result']
 
         X_train, y_train = X.iloc[train], y.iloc[train]
@@ -201,4 +203,5 @@ def train_without_optuna():
     print(f'MEAN FOLDS ACCURACY {np.round(np.mean(accuracies), 3)}%')
 
 if __name__ == '__main__':
-    train_with_optuna()
+    # train_with_optuna()
+    train_without_optuna()

@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from trueskill import Rating, quality_1vs1, rate_1vs1
 
 def full_time_result_to_class(result):
     if result == 'H':
@@ -150,6 +151,108 @@ def calculate_history(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
+def calculate_trueskill(df: pd.DataFrame) -> pd.DataFrame:
+
+    trueskill_dict = {}
+    trueskill_season_dict = {}
+
+    home_elos = []
+    away_elos = []
+
+    home_mu = []
+    home_sigma = []
+    away_mu = []
+    away_sigma = []
+
+    draw_chance = []
+
+    home_elos_reset = []
+    away_elos_reset = []
+
+    home_mu_reset = []
+    home_sigma_reset = []
+    away_mu_reset = []
+    away_sigma_reset = []
+
+    draw_chance_reset = []
+
+    for _, row in df.iterrows():
+        home_team = row.HomeTeam
+        away_team = row.AwayTeam
+        result = row.Full_Time_Result
+        season = row.Season
+
+        if season not in trueskill_season_dict:
+            trueskill_season_dict[season] = {}
+
+        if home_team not in trueskill_dict:
+            trueskill_dict[home_team] = Rating()
+        
+        if away_team not in trueskill_dict:
+            trueskill_dict[away_team] = Rating()
+        
+        if home_team not in trueskill_season_dict[season]:
+            trueskill_season_dict[season][home_team] = Rating()
+        
+        if away_team not in trueskill_season_dict[season]:
+            trueskill_season_dict[season][away_team] = Rating()
+        
+
+        home_elos.append(trueskill_dict[home_team])
+        away_elos.append(trueskill_dict[away_team])
+
+        home_mu.append(trueskill_dict[home_team].mu)
+        home_sigma.append(trueskill_dict[home_team].sigma)
+
+        away_mu.append(trueskill_dict[away_team].mu)
+        away_sigma.append(trueskill_dict[away_team].sigma)
+        
+        draw_chance.append(quality_1vs1(trueskill_dict[home_team], trueskill_dict[away_team]))
+
+
+        home_elos_reset.append(trueskill_season_dict[season][home_team])
+        away_elos_reset.append(trueskill_season_dict[season][away_team])
+
+        home_mu_reset.append(trueskill_season_dict[season][home_team].mu)
+        home_sigma_reset.append(trueskill_season_dict[season][home_team].sigma)
+
+        away_mu_reset.append(trueskill_season_dict[season][away_team].mu)
+        away_sigma_reset.append(trueskill_season_dict[season][away_team].sigma)
+        
+        draw_chance_reset.append(quality_1vs1(trueskill_season_dict[season][home_team], trueskill_season_dict[season][away_team]))
+
+
+
+        if result == 0:
+            trueskill_dict[home_team], trueskill_dict[away_team] = rate_1vs1(trueskill_dict[home_team], trueskill_dict[away_team], drawn=True)
+            trueskill_season_dict[season][home_team], trueskill_season_dict[season][away_team] = rate_1vs1(trueskill_season_dict[season][home_team], trueskill_season_dict[season][away_team], drawn=True)
+        elif result == 1:
+            trueskill_dict[home_team], trueskill_dict[away_team] = rate_1vs1(trueskill_dict[home_team], trueskill_dict[away_team])
+            trueskill_season_dict[season][home_team], trueskill_season_dict[season][away_team] = rate_1vs1(trueskill_season_dict[season][home_team], trueskill_season_dict[season][away_team])
+        elif result == 2:
+            trueskill_dict[away_team], trueskill_dict[home_team] = rate_1vs1(trueskill_dict[away_team], trueskill_dict[home_team])
+            trueskill_season_dict[season][away_team], trueskill_season_dict[season][home_team] = rate_1vs1(trueskill_season_dict[season][away_team], trueskill_season_dict[season][home_team])
+        else:
+            raise Exception('This match has no result, please check the data.')
+
+    # df['HOME_TRUESKILL_NO_RESET'] = home_elos
+    # df['AWAY_TRUESKILL_NO_RESET'] = away_elos
+    df['HOME_TRUESKILL_MU_NO_RESET'] = home_mu
+    df['AWAY_TRUESKILL_MU_NO_RESET'] = away_mu
+    df['HOME_TRUESKILL_SIGMA_NO_RESET'] = home_sigma
+    df['AWAY_TRUESKILL_SIGMA_NO_RESET'] = away_sigma
+    df['DRAW_CHANCE_NO_RESET'] = draw_chance
+
+    # df['HOME_TRUESKILL_SEASON'] = home_elos_reset
+    # df['AWAY_TRUESKILL_SEASON'] = away_elos_reset
+    df['HOME_TRUESKILL_MU_SEASON'] = home_mu_reset
+    df['AWAY_TRUESKILL_MU_SEASON'] = away_mu_reset
+    df['HOME_TRUESKILL_SIGMA_SEASON'] = home_sigma_reset
+    df['AWAY_TRUESKILL_SIGMA_SEASON'] = away_sigma_reset
+    df['DRAW_CHANCE_SEASON'] = draw_chance_reset
+    return df
+
 if __name__ == '__main__':
     df = pd.read_csv('../../inputs/raw_data/all_matches.csv', parse_dates=['Date'])
     df = df[df.HomeTeam.notna()]
@@ -160,5 +263,6 @@ if __name__ == '__main__':
     df = shift_elo(df)
     df = calculate_stat_differences(df)
     df = calculate_history(df)
+    df = calculate_trueskill(df)
     
     df.to_csv('../../inputs/ready_data/preprocessed_all_matches.csv', index=False)
