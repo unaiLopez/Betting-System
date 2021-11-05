@@ -12,6 +12,7 @@ import dash_table as dt
 import numpy as np
 
 df = pd.read_csv('../inputs/ready_data/preprocessed_all_matches.csv')
+df.sort_values(by=['Date'], inplace=True)
 df = df[['HomeTeam', 'AwayTeam', 'Full_Time_Result', 'Season']]
 
 elo_df = get_elo_df()
@@ -24,6 +25,7 @@ df_away = df.groupby(['AwayTeam', 'Full_Time_Result', 'Season']).size().reset_in
 df_away.rename(columns = {0: 'Count'}, inplace=True)
 
 all_dims = ['HomeTeam', 'Season']
+match_result = ['Home', 'Away', 'Draw', 'Both']
 
 drop_seasons = df.Season.unique().tolist()
 drop_seasons.append('All')
@@ -34,6 +36,7 @@ app.layout = html.Div([
     html.H1('Lo del furboh'),
     dcc.Tabs(id="tabs-example-graph", value='tab-1-example-graph', children=[
         dcc.Tab(label='Main Stats', value='Main Stats'),
+        dcc.Tab(label='Season Stats', value='Season Stats'),
         dcc.Tab(label='Profit', value='Profit Plots'),
 
     ]),
@@ -75,7 +78,14 @@ def render_content(tab):
             dcc.Graph(id="ProfitPlot"),
             dcc.Graph(id="ACCProfitPlot")
         ])
+    elif tab == 'Season Stats':
 
+        return html.Div(children=[
+            dcc.Dropdown(id="results", options=[{"label": x, "value": x}  for x in match_result], # value=all_dims[:2],
+                         multi=False),
+            dcc.Graph(id="SeasonStats"),
+            
+        ])
 
 
 @app.callback(
@@ -88,7 +98,7 @@ def update_bar_chart(season, team):
         data_home = df_home.query('Season==@season & HomeTeam==@team')
 
     fig = px.bar(
-        data_home, x='Full_Time_Result',y='Count', color="HomeTeam", barmode='group')
+        data_home, x='Full_Time_Result',y='Count', color="Season", barmode='group')
     return fig
 
 @app.callback(
@@ -100,8 +110,7 @@ def update_bar_chart(season, team):
     else:
         data_away = df_away.query('Season==@season & AwayTeam==@team')
     fig = px.bar(
-        data_away, x='Full_Time_Result',y='Count', color="AwayTeam", barmode='group',
-        color_discrete_sequence =['red']*len(df))
+        data_away, x='Full_Time_Result',y='Count', color="Season", barmode='group')
     return fig
 
 

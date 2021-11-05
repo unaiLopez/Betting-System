@@ -1,6 +1,7 @@
-from os import RTLD_DEEPBIND
 import pandas as pd
 import random
+
+BASE_BET = 1
 
 def get_elo_df():
     df = pd.read_csv('../inputs/ready_data/preprocessed_all_matches.csv')
@@ -54,9 +55,9 @@ def get_only_home_df(df):
     profit_list = []
     for _, row in df_home.iterrows():
         if row.Full_Time_Result==1:
-            profit_list.append(row.BetAndWin_Home_Win_Odds)
+            profit_list.append(BASE_BET*row.BetAndWin_Home_Win_Odds - BASE_BET)
         else:
-            profit_list.append(-1)
+            profit_list.append(-BASE_BET)
     
     df_home['PROFIT'] = profit_list
     df_home['ACC_PROFIT'] = df_home.PROFIT.cumsum()
@@ -69,9 +70,9 @@ def get_only_away_df(df):
     profit_list = []
     for _, row in df_away.iterrows():
         if row.Full_Time_Result==2:
-            profit_list.append(row.BetAndWin_Away_Win_Odds)
+            profit_list.append(BASE_BET*row.BetAndWin_Away_Win_Odds - BASE_BET)
         else:
-            profit_list.append(-1)
+            profit_list.append(-BASE_BET)
     
     df_away['PROFIT'] = profit_list
     df_away['ACC_PROFIT'] = df_away.PROFIT.cumsum()
@@ -83,9 +84,9 @@ def get_only_draw_df(df):
     profit_list = []
     for _, row in df_draw.iterrows():
         if row.Full_Time_Result==0:
-            profit_list.append(row.BetAndWin_Draw_Odds)
+            profit_list.append(BASE_BET*row.BetAndWin_Draw_Odds - BASE_BET)
         else:
-            profit_list.append(-1)
+            profit_list.append(-BASE_BET)
     
     df_draw['PROFIT'] = profit_list
     df_draw['ACC_PROFIT'] = df_draw.PROFIT.cumsum()
@@ -99,14 +100,15 @@ def get_random_df(df):
         pred = random.randint(0,2)
         # BetAndWin_Home_Win_Odds,BetAndWin_Draw_Odds,BetAndWin_Away_Win_Odds
         result = row.Full_Time_Result
-        if pred == result and result==0:
-            profit_list.append(row.BetAndWin_Draw_Odds)
-        elif pred == result and result==0:
-            profit_list.append(row.BetAndWin_Draw_Odds)
-        elif pred == result and result==0:
-            profit_list.append(row.BetAndWin_Draw_Odds)
+        if pred == result:
+            if result==0:
+                profit_list.append(BASE_BET*row.BetAndWin_Draw_Odds - BASE_BET)
+            elif result==1:
+                profit_list.append(BASE_BET*row.BetAndWin_Home_Win_Odds - BASE_BET)
+            elif result==2:
+                profit_list.append(BASE_BET*row.BetAndWin_Away_Win_Odds - BASE_BET)
         else:
-            profit_list.append(-1)
+            profit_list.append(-BASE_BET)
     
     df_random['PROFIT'] = profit_list
     df_random['ACC_PROFIT'] = df_random.PROFIT.cumsum()
@@ -126,19 +128,19 @@ def get_elo_profit_df(df):
         elif row.HOME_TRUESKILL_MU_SEASON < row.AWAY_TRUESKILL_MU_SEASON:
             pred = 2
 
-
-        if pred == result and result==0:
-            profit_list.append(row.BetAndWin_Draw_Odds)
-        elif pred == result and result==0:
-            profit_list.append(row.BetAndWin_Draw_Odds)
-        elif pred == result and result==0:
-            profit_list.append(row.BetAndWin_Draw_Odds)
+        if pred==result:
+            if result==0:
+                profit_list.append(BASE_BET*row.BetAndWin_Draw_Odds - BASE_BET)
+            elif result==1:
+                profit_list.append(BASE_BET*row.BetAndWin_Home_Win_Odds - BASE_BET)
+            elif result==2:
+                profit_list.append(BASE_BET*row.BetAndWin_Away_Win_Odds - BASE_BET)
         else:
-            profit_list.append(-1)
+            profit_list.append(-BASE_BET)
     
     df_elo_profit['PROFIT'] = profit_list
     df_elo_profit['ACC_PROFIT'] = df_elo_profit.PROFIT.cumsum()
     return df_elo_profit
 
 
-    
+# def get_profit_df_by_team(df):
