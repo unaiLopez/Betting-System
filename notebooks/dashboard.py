@@ -1,14 +1,13 @@
 import dash
 from dash import dcc
 from dash import html
-from dash.dash_table.DataTable import DataTable
+from dash import dash_table as dt
 from dash.dependencies import Input, Output
 import plotly.express as px
 import dash_bootstrap_components as dbc
 import pandas as pd
 import dash_daq as daq
 from dashboard_utils import get_elo_df, get_profit_df
-import dash_table as dt
 import numpy as np
 
 df = pd.read_csv('../inputs/ready_data/preprocessed_all_matches.csv')

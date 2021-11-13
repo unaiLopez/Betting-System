@@ -253,6 +253,123 @@ def calculate_trueskill(df: pd.DataFrame) -> pd.DataFrame:
     df['DRAW_CHANCE_SEASON'] = draw_chance_reset
     return df
 
+
+def team_names_to_numeric(df):
+    team_list = df.HomeTeam.unique().tolist()
+    team_dict = {x: team_list.index(x) for x in team_list}
+    df['HOME_ID'] = df.HomeTeam.map(team_dict)
+    df['AWAY_ID'] = df.AwayTeam.map(team_dict)
+    return df
+
+
+def result_count(df):
+    seasons = df.Season.unique()
+    home_wins_playing_home = []
+    home_draws_playing_home = []
+    home_losses_playing_home = []
+
+    away_wins_playing_home = []
+    away_draws_playing_home = []
+    away_losses_playing_home = []
+
+    home_wins_playing_away = []
+    home_draws_playing_away = []
+    home_losses_playing_away = []
+
+    away_wins_playing_away = []
+    away_draws_playing_away = []
+    away_losses_playing_away = []
+    teams = {}
+    for season in seasons:
+        df_aux = df.query('Season==@season')
+        teams = {}
+        for _, row in df_aux.iterrows():
+            home_team = row.HomeTeam
+            away_team = row.AwayTeam
+            if home_team not in teams:
+                teams[home_team] = {"Home_Wins": [], "Home_Draws": [], "Home_Losses": [],
+                                    "Away_Wins": [], "Away_Draws": [], "Away_Losses": []}
+            if away_team not in teams:
+                teams[away_team] = {"Home_Wins": [], "Home_Draws": [], "Home_Losses": [],
+                                    "Away_Wins": [], "Away_Draws": [], "Away_Losses": []}
+
+            result = row.Full_Time_Result
+            
+            
+            home_wins_playing_home.append(sum(teams[home_team]["Home_Wins"]))
+            home_draws_playing_home.append(sum(teams[home_team]["Home_Draws"]))
+            home_losses_playing_home.append(sum(teams[home_team]["Home_Losses"]))
+            away_wins_playing_home.append(sum(teams[away_team]["Home_Wins"]))
+            away_draws_playing_home.append(sum(teams[away_team]["Home_Draws"]))
+            away_losses_playing_home.append(sum(teams[away_team]["Home_Losses"]))
+
+            home_wins_playing_away.append(sum(teams[home_team]["Away_Wins"]))
+            home_draws_playing_away.append(sum(teams[home_team]["Away_Draws"]))
+            home_losses_playing_away.append(sum(teams[home_team]["Away_Losses"]))
+            away_wins_playing_away.append(sum(teams[away_team]["Away_Wins"]))
+            away_draws_playing_away.append(sum(teams[away_team]["Away_Draws"]))
+            away_losses_playing_away.append(sum(teams[away_team]["Away_Losses"]))
+
+            if result == 0:
+                # empate
+                teams[home_team]["Home_Wins"].append(0)
+                teams[home_team]["Home_Draws"].append(1)
+                teams[home_team]["Home_Losses"].append(0)
+                teams[home_team]["Away_Wins"].append(0)
+                teams[home_team]["Away_Draws"].append(0)
+                teams[home_team]["Away_Losses"].append(0)
+
+                teams[away_team]["Home_Wins"].append(0)
+                teams[away_team]["Home_Draws"].append(0)
+                teams[away_team]["Home_Losses"].append(0)
+                teams[away_team]["Away_Wins"].append(0)
+                teams[away_team]["Away_Draws"].append(1)
+                teams[away_team]["Away_Losses"].append(0)
+
+            elif result == 1:
+                teams[home_team]["Home_Wins"].append(1)
+                teams[home_team]["Home_Draws"].append(0)
+                teams[home_team]["Home_Losses"].append(0)
+                teams[home_team]["Away_Wins"].append(0)
+                teams[home_team]["Away_Draws"].append(0)
+                teams[home_team]["Away_Losses"].append(0)
+
+                teams[away_team]["Home_Wins"].append(0)
+                teams[away_team]["Home_Draws"].append(0)
+                teams[away_team]["Home_Losses"].append(0)
+                teams[away_team]["Away_Wins"].append(0)
+                teams[away_team]["Away_Draws"].append(0)
+                teams[away_team]["Away_Losses"].append(1)
+
+            else:
+                teams[home_team]["Home_Wins"].append(0)
+                teams[home_team]["Home_Draws"].append(0)
+                teams[home_team]["Home_Losses"].append(1)
+                teams[home_team]["Away_Wins"].append(0)
+                teams[home_team]["Away_Draws"].append(0)
+                teams[home_team]["Away_Losses"].append(0)
+
+                teams[away_team]["Home_Wins"].append(0)
+                teams[away_team]["Home_Draws"].append(0)
+                teams[away_team]["Home_Losses"].append(0)
+                teams[away_team]["Away_Wins"].append(1)
+                teams[away_team]["Away_Draws"].append(0)
+                teams[away_team]["Away_Losses"].append(0)
+
+    df['HOME_WINS_HOME'] = home_wins_playing_home
+    df['HOME_DRAWS_HOME'] = home_draws_playing_home
+    df['HOME_LOSSES_HOME'] = home_losses_playing_home
+    df['AWAY_WINS_HOME'] = away_wins_playing_home
+    df['AWAY_DRAWS_HOME'] = away_draws_playing_home
+    df['AWAY_LOSSES_HOME'] = away_losses_playing_home
+    df['HOME_WINS_AWAY'] = home_wins_playing_away
+    df['HOME_DRAWS_AWAY'] = home_draws_playing_away
+    df['HOME_LOSSES_AWAY'] = home_losses_playing_away
+    df['AWAY_WINS_AWAY'] = away_wins_playing_away
+    df['AWAY_DRAWS_AWAY'] = away_draws_playing_away
+    df['AWAY_LOSSES_AWAY'] = away_losses_playing_away
+    return df
+
 if __name__ == '__main__':
     df = pd.read_csv('../../inputs/raw_data/all_matches.csv', parse_dates=['Date'])
     df = df[df.HomeTeam.notna()]
@@ -264,5 +381,7 @@ if __name__ == '__main__':
     df = calculate_stat_differences(df)
     df = calculate_history(df)
     df = calculate_trueskill(df)
-    
+    df = team_names_to_numeric(df)
+    df = result_count(df)
+
     df.to_csv('../../inputs/ready_data/preprocessed_all_matches.csv', index=False)
