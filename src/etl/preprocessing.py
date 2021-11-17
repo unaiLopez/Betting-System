@@ -370,6 +370,11 @@ def result_count(df):
     df['AWAY_LOSSES_AWAY'] = away_losses_playing_away
     return df
 
+def clean_data(df: pd.DataFrame)->pd.DataFrame:
+    df.drop(['Half_Time_Home_Team_Goals','Half_Time_Away_Team_Goals', 'Half_Time_Result', 'Home_Team_Red_Cards.1'], axis=1, inplace=True)
+    return df
+
+
 if __name__ == '__main__':
     df = pd.read_csv('../../inputs/raw_data/all_matches.csv', parse_dates=['Date'])
     df = df[df.HomeTeam.notna()]
@@ -383,5 +388,5 @@ if __name__ == '__main__':
     df = calculate_trueskill(df)
     df = team_names_to_numeric(df)
     df = result_count(df)
-
+    df = clean_data(df)
     df.to_csv('../../inputs/ready_data/preprocessed_all_matches.csv', index=False)
